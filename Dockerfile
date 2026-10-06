@@ -29,8 +29,7 @@ RUN python -m spacy download en_core_web_sm
 COPY . .
 
 # Expose port for the backend
-EXPOSE 8000
+EXPOSE 7860
 
-# Start the FastAPI backend
-# Cloud providers like Render pass the port via $PORT variable.
-CMD ["sh", "-c", "uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Start the FastAPI backend (Defaulting to 7860 for HuggingFace Spaces compatibility)
+CMD ["sh", "-c", "uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-7860}"]
