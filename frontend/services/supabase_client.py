@@ -37,8 +37,8 @@ OAUTH_REDIRECT_URL = (
 
 
 def _missing_config() -> str | None:
-    if not SUPABASE_URL or not SUPABASE_ANON_KEY:
-        return 'Supabase is not configured — set SUPABASE_URL and SUPABASE_ANON_KEY in .env or .streamlit/secrets.toml'
+    if not SUPABASE_URL or not SUPABASE_ANON_KEY or "your_" in SUPABASE_URL or not SUPABASE_URL.startswith("http"):
+        return 'Supabase is not configured properly — please replace placeholder values in .env with your actual Supabase URL and keys.'
     return None
 
 

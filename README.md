@@ -2,8 +2,6 @@
 
 A web app that scores how well a resume matches a job description and returns actionable feedback. Built with FastAPI + Streamlit, using spaCy and Sentence Transformers for NLP and the Groq API for LLM-generated suggestions.
 
-**Live Demo:** [https://appapppy-ktwxupi73vqhjzweksze9d.streamlit.app/](https://appapppy-ktwxupi73vqhjzweksze9d.streamlit.app/)
-
 ## What it does
 
 1. Upload a resume (PDF / DOC / DOCX) and paste a job description.
