@@ -2,6 +2,8 @@
 
 A web app that scores how well a resume matches a job description and returns actionable feedback. Built with FastAPI + Streamlit, using spaCy and Sentence Transformers for NLP and the Groq API for LLM-generated suggestions.
 
+**Live Demo:** [https://appapppy-ktwxupi73vqhjzweksze9d.streamlit.app/](https://appapppy-ktwxupi73vqhjzweksze9d.streamlit.app/)
+
 ## What it does
 
 1. Upload a resume (PDF / DOC / DOCX) and paste a job description.
@@ -25,9 +27,9 @@ ATS_SCORER/
 ├── backend/              FastAPI app, NLP services, API routes
 ├── frontend/             Streamlit app, views, components
 ├── jupyter notebooks/    Research and dataset prep (not used at runtime)
-├── ml model/             Exported ML artifacts
 ├── requirements.txt      Combined backend + frontend dependencies
 └── .env.example          Template for environment variables
 ```
-ing still works — only the LLM suggestions section will be empty.
-- `jupyter notebooks/` and `ml model/` are for experimentation and aren't required to run the app.
+
+- If you don't provide a Groq API key, the ATS scoring still works — only the LLM suggestions section will be empty.
+- `jupyter notebooks/` is for experimentation and isn't required to run the app.
