@@ -1,11 +1,12 @@
 FROM python:3.11-slim
 
-# Install system dependencies for WeasyPrint (PDF generation) and other tools
+# Install system dependencies for WeasyPrint (PDF generation), libmagic, and other tools
 RUN apt-get update && apt-get install -y \
     libcairo2 \
     libpango-1.0-0 \
     libpangoft2-1.0-0 \
     libffi-dev \
+    libmagic1 \
     shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
 
