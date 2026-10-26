@@ -77,7 +77,11 @@ def validate_file(file_data:bytes, filename:str)->Tuple[bool, str, Optional[str]
 def _extract_pdf_hyperlinks(file_data: bytes) -> str:
     urls = []
     try:
-        reader = PyPDF2.PdfReader(io.BytesIO(file_data))
+        try:
+            import pypdf
+            reader = pypdf.PdfReader(io.BytesIO(file_data))
+        except ImportError:
+            reader = PyPDF2.PdfReader(io.BytesIO(file_data))
         for page in reader.pages:
             if '/Annots' not in page:
                 continue
@@ -89,7 +93,6 @@ def _extract_pdf_hyperlinks(file_data: bytes) -> str:
                     action = annot.get('/A', {})
                     uri = action.get('/URI', '')
                     if uri and isinstance(uri, (str, bytes)):
-                        # PyPDF2 may return bytes for URI values
                         if isinstance(uri, bytes):
                             uri = uri.decode('utf-8', errors='ignore')
                         uri = uri.strip()
@@ -102,68 +105,74 @@ def _extract_pdf_hyperlinks(file_data: bytes) -> str:
     return '\n'.join(urls)
 
 
-def _extract_pdf_with_pdfplumber(file_data: bytes) -> str:
-    text = ''
-    with pdfplumber.open(io.BytesIO(file_data)) as pdf:
-        for page in pdf.pages:
-            page_text = page.extract_text()
-            if page_text:
-                text += page_text + '\n'
-
-    if not text.strip():
-        raise TextExtractionError(
-            'pdfplumber extracted no text',
-            user_message='No text could be extracted from the PDF.'
-        )
-    
-    hyperlinks = _extract_pdf_hyperlinks(file_data)
-    if hyperlinks:
-        text = text.strip() + '\n' + hyperlinks
-
-    return text.strip()
-
-
-def _extract_pdf_with_pypdf2(file_data: bytes) -> str:
-    text = ''
-    pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_data))
-    for page in pdf_reader.pages:
-        page_text = page.extract_text()
-        if page_text:
-            text += page_text + '\n'
-
-    if not text.strip():
-        raise TextExtractionError(
-            'PyPDF2 extracted no text',
-            user_message='No text could be extracted from the PDF.'
-        )
-
-    hyperlinks = _extract_pdf_hyperlinks(file_data)
-    if hyperlinks:
-        text = text.strip() + '\n' + hyperlinks
-
-    return text.strip()
-
-
 def extract_text_from_pdf(file_data: bytes) -> str:
-    try: 
-        result, used_fallback=with_fallback(
-        _extract_pdf_with_pdfplumber, 
-        _extract_pdf_with_pypdf2, 
-        file_data, 
-        log_fallback=True
-    )
-    
-        if used_fallback:
-            log_info('PDF EXTRACTION succeded using the PyPDF2 fallback', context='resume_parser')
-        return result
-        
-    except Exception as e:
-        log_error(e, context='extract_text_from_pdf')
+    extracted_text = ""
+    errors = []
+
+    # Tier 1: pdfplumber standard layout & word extraction (great for LaTeX)
+    try:
+        with pdfplumber.open(io.BytesIO(file_data)) as pdf:
+            pages_text = []
+            for page in pdf.pages:
+                pt = page.extract_text()
+                if pt and pt.strip():
+                    pages_text.append(pt)
+                else:
+                    # Try word-by-word extraction if standard text block is empty (common in custom LaTeX layouts)
+                    words = page.extract_words()
+                    if words:
+                        pages_text.append(" ".join(w["text"] for w in words if "text" in w))
+            if pages_text:
+                extracted_text = "\n".join(pages_text).strip()
+    except Exception as e1:
+        errors.append(f"pdfplumber: {e1}")
+
+    # Tier 2: pdfminer.high_level directly (handles non-standard font encodings)
+    if not extracted_text:
+        try:
+            from pdfminer.high_level import extract_text as pdfminer_extract_text
+            txt = pdfminer_extract_text(io.BytesIO(file_data))
+            if txt and txt.strip():
+                extracted_text = txt.strip()
+        except Exception as e2:
+            errors.append(f"pdfminer: {e2}")
+
+    # Tier 3: pypdf / PyPDF2 fallback
+    if not extracted_text:
+        try:
+            try:
+                import pypdf
+                reader = pypdf.PdfReader(io.BytesIO(file_data))
+            except ImportError:
+                reader = PyPDF2.PdfReader(io.BytesIO(file_data))
+            
+            pages_text = []
+            for page in reader.pages:
+                pt = page.extract_text()
+                if pt and pt.strip():
+                    pages_text.append(pt)
+            if pages_text:
+                extracted_text = "\n".join(pages_text).strip()
+        except Exception as e3:
+            errors.append(f"pypdf: {e3}")
+
+    if not extracted_text:
+        log_error(f"All PDF extractors failed: {errors}", context="extract_text_from_pdf")
         raise FileParsingError(
-            'Failed to extract text from PDF using both pdfplumber and PyPDF2. '
-            'The PDF may be corrupted, password-protected, or contain only scanned images. '
-            'Please ensure it contains selectable text.'
-        ) from e
+            f"Failed to extract text from PDF. Details: {'; '.join(errors) if errors else 'No selectable text found'}. "
+            "The PDF may contain scanned images, be password-protected, or lack a selectable text layer. "
+            "Please ensure the resume contains selectable text or try uploading a DOCX version."
+        )
+
+    # Append hyperlinks if found
+    try:
+        hyperlinks = _extract_pdf_hyperlinks(file_data)
+        if hyperlinks:
+            extracted_text = extracted_text + "\n" + hyperlinks
+    except Exception:
+        pass
+
+    return extracted_text
     
 
 def extract_text_from_docx(file_data: bytes) -> str:
