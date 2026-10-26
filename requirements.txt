@@ -19,7 +19,7 @@ python-dotenv>=1.0
 
 # ── Backend: NLP / ML ──
 spacy>=3.7,<4.0
-sentence-transformers>=2.5
+fastembed>=0.2.0
 numpy>=1.26
 rapidfuzz>=3.6
 
