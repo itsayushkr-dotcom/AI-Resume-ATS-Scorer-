@@ -8,10 +8,18 @@ DEFAULT_BACKEND_URL = "http://localhost:8000"
 
 
 def _backend_url() -> str:
+    import os
     try:
-        return st.secrets["backend"]["url"]
-    except (KeyError, FileNotFoundError):
-        return DEFAULT_BACKEND_URL
+        if hasattr(st, "secrets"):
+            if "backend" in st.secrets and "url" in st.secrets["backend"]:
+                return st.secrets["backend"]["url"].rstrip("/")
+            if "BACKEND_URL" in st.secrets:
+                return st.secrets["BACKEND_URL"].rstrip("/")
+            if "backend_url" in st.secrets:
+                return st.secrets["backend_url"].rstrip("/")
+    except Exception:
+        pass
+    return os.getenv("BACKEND_URL", DEFAULT_BACKEND_URL).rstrip("/")
 
 
 def _auth_headers(access_token: str) -> Dict[str, str]:
