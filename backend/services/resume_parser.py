@@ -1,3 +1,4 @@
+import io
 try:
     import magic
 except (ImportError, Exception):
